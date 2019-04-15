@@ -51,7 +51,7 @@ public class MediaPlayerService extends Service implements
 
     @Override
     public void onPrepared(MediaPlayer mp) {
-        //Invoked when the media source is ready for playback.
+
     }
 
     @Override

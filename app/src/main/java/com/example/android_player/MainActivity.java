@@ -11,6 +11,7 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.res.TypedArray;
 import android.database.Cursor;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -20,6 +21,7 @@ import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -29,16 +31,16 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ImageView;
-
+import android.widget.MediaController;
 
 
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static final String Broadcast_PLAY_NEW_AUDIO = "com.valdioveliu.valdio.audioplayer.PlayNewAudio";
+    public static final String Broadcast_PLAY_NEW_AUDIO = "com.example.android_player.PlayNewAudio";
     public static final int MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 123;
-
+    private MediaControllerCompat mediaController;
     private MediaPlayerService player;
     boolean serviceBound = false;
     ArrayList<Audio> audioList;
@@ -67,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
 //                playAudio("https://upload.wikimedia.org/wikipedia/commons/6/6c/Grieg_Lyric_Pieces_Kobold.ogg");
                 //play the first audio in the ArrayList
-//                playAudio(2);
+               playAudio(2);
                 if (imageIndex == 4) {
                     imageIndex = 0;
                     loadCollapsingImage(imageIndex);
@@ -156,7 +158,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void playAudio(int audioIndex) {
         //Check is service is active
+
         if (!serviceBound) {
+            setVolumeControlStream(AudioManager.STREAM_MUSIC);
             //Store Serializable audioList to SharedPreferences
             StorageUtil storage = new StorageUtil(getApplicationContext());
             storage.storeAudio(audioList);
@@ -174,6 +178,10 @@ public class MainActivity extends AppCompatActivity {
             //Send a broadcast to the service -> PLAY_NEW_AUDIO
             Intent broadcastIntent = new Intent(Broadcast_PLAY_NEW_AUDIO);
             sendBroadcast(broadcastIntent);
+
+           // if (mediaController != null)
+             //   mediaController.getTransportControls().play();
+
         }
     }
 

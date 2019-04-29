@@ -9,9 +9,7 @@ import com.google.gson.reflect.TypeToken;
 import java.util.ArrayList;
 import java.lang.reflect.Type;
 
-/**
- * Created by Valdio Veliu on 16-07-30.
- */
+
 public class StorageUtil {
 
     private final String STORAGE = " com.example.android_player.STORAGE";

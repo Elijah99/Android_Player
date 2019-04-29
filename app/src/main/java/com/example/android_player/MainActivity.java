@@ -1,7 +1,7 @@
 package com.example.android_player;
 
+import android.Manifest;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -22,6 +22,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.media.session.MediaControllerCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -32,15 +33,21 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ImageView;
 import android.widget.MediaController;
+import android.widget.Toast;
 
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static android.os.Build.VERSION.SDK_INT;
 
 public class MainActivity extends AppCompatActivity {
 
     public static final String Broadcast_PLAY_NEW_AUDIO = "com.example.android_player.PlayNewAudio";
-    public static final int MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 123;
-    private MediaControllerCompat mediaController;
+    public static final int REQUEST_ID_MULTIPLE_PERMISSIONS = 1;
+
     private MediaPlayerService player;
     boolean serviceBound = false;
     ArrayList<Audio> audioList;
@@ -57,10 +64,9 @@ public class MainActivity extends AppCompatActivity {
         collapsingImageView = (ImageView) findViewById(R.id.collapsingImageView);
 
         loadCollapsingImage(imageIndex);
-        if (checkPermissionREAD_EXTERNAL_STORAGE(this)) {
-            loadAudio();
+        if (checkAndRequestPermissions()) {
+            loadAudioList();
         }
-        initRecyclerView();
 
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
@@ -69,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
 //                playAudio("https://upload.wikimedia.org/wikipedia/commons/6/6c/Grieg_Lyric_Pieces_Kobold.ogg");
                 //play the first audio in the ArrayList
-               playAudio(2);
+             //  playAudio(2);
                 if (imageIndex == 4) {
                     imageIndex = 0;
                     loadCollapsingImage(imageIndex);
@@ -81,21 +87,119 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private boolean checkAndRequestPermissions() {
+        if (SDK_INT >= Build.VERSION_CODES.M) {
+            int permissionReadPhoneState = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE);
+            int permissionStorage = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+            List<String> listPermissionsNeeded = new ArrayList<>();
+
+            if (permissionReadPhoneState != PackageManager.PERMISSION_GRANTED) {
+                listPermissionsNeeded.add(Manifest.permission.READ_PHONE_STATE);
+            }
+
+            if (permissionStorage != PackageManager.PERMISSION_GRANTED) {
+                listPermissionsNeeded.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+            }
+
+            if (!listPermissionsNeeded.isEmpty()) {
+                ActivityCompat.requestPermissions(this, listPermissionsNeeded.toArray(new String[listPermissionsNeeded.size()]), REQUEST_ID_MULTIPLE_PERMISSIONS);
+                return false;
+            } else {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void loadAudioList() {
+        loadAudio();
+        initRecyclerView();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+
+        String TAG = "LOG_PERMISSION";
+        Log.d(TAG, "Permission callback called-------");
+        switch (requestCode) {
+            case REQUEST_ID_MULTIPLE_PERMISSIONS: {
+
+                Map<String, Integer> perms = new HashMap<>();
+                // Initialize the map with both permissions
+                perms.put(Manifest.permission.READ_PHONE_STATE, PackageManager.PERMISSION_GRANTED);
+                perms.put(Manifest.permission.READ_EXTERNAL_STORAGE, PackageManager.PERMISSION_GRANTED);
+                // Fill with actual results from user
+                if (grantResults.length > 0) {
+                    for (int i = 0; i < permissions.length; i++)
+                        perms.put(permissions[i], grantResults[i]);
+                    // Check for both permissions
+
+                    if (perms.get(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
+                            && perms.get(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+                    ) {
+                        Log.d(TAG, "Phone state and storage permissions granted");
+                        // process the normal flow
+                        //else any one or both the permissions are not granted
+                        loadAudioList();
+                    } else {
+                        Log.d(TAG, "Some permissions are not granted ask again ");
+                        //permission is denied (this is the first time, when "never ask again" is not checked) so ask again explaining the usage of permission
+//                      //shouldShowRequestPermissionRationale will return true
+                        //show the dialog or snackbar saying its necessary and try again otherwise proceed with setup.
+                        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_EXTERNAL_STORAGE) ||
+                                ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_PHONE_STATE)) {
+                            showDialogOK("Phone state and storage permissions required for this app",
+                                    new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            switch (which) {
+                                                case DialogInterface.BUTTON_POSITIVE:
+                                                    checkAndRequestPermissions();
+                                                    break;
+                                                case DialogInterface.BUTTON_NEGATIVE:
+                                                    // proceed with logic by disabling the related features or quit the app.
+                                                    break;
+                                            }
+                                        }
+                                    });
+                        }
+                        //permission is denied (and never ask again is  checked)
+                        //shouldShowRequestPermissionRationale will return false
+                        else {
+                            Toast.makeText(this, "Go to settings and enable permissions", Toast.LENGTH_LONG)
+                                    .show();
+                            //proceed with logic by disabling the related features or quit the app.
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+
+    private void showDialogOK(String message, DialogInterface.OnClickListener okListener) {
+        new AlertDialog.Builder(this)
+                .setMessage(message)
+                .setPositiveButton("OK", okListener)
+                .setNegativeButton("Cancel", okListener)
+                .create()
+                .show();
+    }
+
 
     private void initRecyclerView() {
-        if (audioList.size() > 0) {
+        if (audioList != null && audioList.size() > 0) {
             RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recyclerview);
             RecyclerView_Adapter adapter = new RecyclerView_Adapter(audioList, getApplication());
             recyclerView.setAdapter(adapter);
             recyclerView.setLayoutManager(new LinearLayoutManager(this));
             recyclerView.addOnItemTouchListener(new CustomTouchListener(this, new onItemClickListener() {
-
                 @Override
                 public void onClick(View view, int index) {
                     playAudio(index);
                 }
             }));
-
         }
     }
 
@@ -158,9 +262,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void playAudio(int audioIndex) {
         //Check is service is active
-
         if (!serviceBound) {
-            setVolumeControlStream(AudioManager.STREAM_MUSIC);
             //Store Serializable audioList to SharedPreferences
             StorageUtil storage = new StorageUtil(getApplicationContext());
             storage.storeAudio(audioList);
@@ -178,10 +280,6 @@ public class MainActivity extends AppCompatActivity {
             //Send a broadcast to the service -> PLAY_NEW_AUDIO
             Intent broadcastIntent = new Intent(Broadcast_PLAY_NEW_AUDIO);
             sendBroadcast(broadcastIntent);
-
-           // if (mediaController != null)
-             //   mediaController.getTransportControls().play();
-
         }
     }
 
@@ -209,53 +307,6 @@ public class MainActivity extends AppCompatActivity {
         cursor.close();
     }
 
-
-    public boolean checkPermissionREAD_EXTERNAL_STORAGE(
-            final Context context) {
-        int currentAPIVersion = Build.VERSION.SDK_INT;
-        if (currentAPIVersion >= android.os.Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(context,
-                   android. Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                if (ActivityCompat.shouldShowRequestPermissionRationale(
-                        (Activity) context,
-                        android.Manifest.permission.READ_EXTERNAL_STORAGE)) {
-                    showDialog("External storage", context,
-                            android.Manifest.permission.READ_EXTERNAL_STORAGE);
-
-                } else {
-                    ActivityCompat
-                            .requestPermissions(
-                                    (Activity) context,
-                                    new String[] { android.Manifest.permission.READ_EXTERNAL_STORAGE },
-                                    MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE);
-                }
-                return false;
-            } else {
-                return true;
-            }
-
-        } else {
-            return true;
-        }
-    }
-
-    public void showDialog(final String msg, final Context context,
-                           final String permission) {
-        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(context);
-        alertBuilder.setCancelable(true);
-        alertBuilder.setTitle("Permission necessary");
-        alertBuilder.setMessage(msg + " permission is necessary");
-        alertBuilder.setPositiveButton(android.R.string.yes,
-                new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        ActivityCompat.requestPermissions((Activity) context,
-                                new String[] { permission },
-                                MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE);
-                    }
-                });
-        AlertDialog alert = alertBuilder.create();
-        alert.show();
-    }
 
     @Override
     protected void onDestroy() {

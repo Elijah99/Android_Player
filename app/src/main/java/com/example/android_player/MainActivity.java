@@ -36,6 +36,7 @@ import android.widget.MediaController;
 import android.widget.Toast;
 
 
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,11 +44,12 @@ import java.util.Map;
 
 import static android.os.Build.VERSION.SDK_INT;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity  {
 
     public static final String Broadcast_PLAY_NEW_AUDIO = "com.example.android_player.PlayNewAudio";
     public static final int REQUEST_ID_MULTIPLE_PERMISSIONS = 1;
 
+    private String action;
     private MediaPlayerService player;
     boolean serviceBound = false;
     ArrayList<Audio> audioList;
@@ -58,32 +60,18 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+       // action = getIntent().getAction();
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        collapsingImageView = (ImageView) findViewById(R.id.collapsingImageView);
 
-        loadCollapsingImage(imageIndex);
+
         if (checkAndRequestPermissions()) {
             loadAudioList();
         }
 
-
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-//                playAudio("https://upload.wikimedia.org/wikipedia/commons/6/6c/Grieg_Lyric_Pieces_Kobold.ogg");
-                //play the first audio in the ArrayList
-             //  playAudio(2);
-                if (imageIndex == 4) {
-                    imageIndex = 0;
-                    loadCollapsingImage(imageIndex);
-                } else {
-                    loadCollapsingImage(++imageIndex);
-                }
-            }
-        });
 
     }
 
@@ -198,7 +186,10 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onClick(View view, int index) {
                     playAudio(index);
-                }
+                    Intent intent = new Intent(MainActivity.this,PlayMusicActivity.class);
+                    intent.putExtra("playing_song_index",index);
+                    startActivity(intent);
+                    }
             }));
         }
     }

@@ -17,6 +17,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".PlayMusicActivity"
+            android:label="@string/playin_song_activity_name">
+
+        </activity>
         <service android:name=".MediaPlayerService"/>
     </application>
 

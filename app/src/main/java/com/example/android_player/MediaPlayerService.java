@@ -1,5 +1,6 @@
 package com.example.android_player;
 
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -28,6 +29,8 @@ import android.util.Log;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import static java.security.AccessController.getContext;
+
 public class MediaPlayerService extends Service implements
         MediaPlayer.OnPreparedListener,
         MediaPlayer.OnErrorListener,
@@ -48,7 +51,6 @@ public class MediaPlayerService extends Service implements
     private MediaSessionManager mediaSessionManager;
     private MediaSessionCompat mediaSession;
     private MediaControllerCompat.TransportControls transportControls;
-
     //AudioPlayer notification ID
     private static final int NOTIFICATION_ID = 101;
 
@@ -92,8 +94,16 @@ public class MediaPlayerService extends Service implements
         callStateListener();
         //ACTION_AUDIO_BECOMING_NOISY -- change in audio outputs -- BroadcastReceiver
         registerBecomingNoisyReceiver();
-        //Listen for new Audio to play -- BroadcastReceiver
+        //Listen for BroadcastReceiver's Intents
         register_playNewAudio();
+
+        register_pauseAudio();
+
+        register_resumeAudio();
+
+        register_skipToPrevAudio();
+
+        register_skipToNextAudio();
     }
 
     //The system calls this method when an activity, requests the service be started
@@ -167,6 +177,8 @@ public class MediaPlayerService extends Service implements
         //clear cached playlist
         new StorageUtil(getApplicationContext()).clearCachedAudioPlaylist();
     }
+
+
 
     /**
      * Service Binder
@@ -532,6 +544,11 @@ public class MediaPlayerService extends Service implements
          *  3 -> Previous track
          */
 
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        String NOTIFICATION_CHANNEL_ID = "my_channel_id_01";
+
+
         int notificationAction = android.R.drawable.ic_media_pause;//needs to be initialized
         PendingIntent play_pauseAction = null;
 
@@ -550,9 +567,11 @@ public class MediaPlayerService extends Service implements
                 R.drawable.image5); //replace with your own image
 
         // Create a new Notification
-        NotificationCompat.Builder notificationBuilder = (NotificationCompat.Builder) new NotificationCompat.Builder(this)
+        NotificationCompat.Builder notificationBuilder =  new NotificationCompat.Builder(this,NOTIFICATION_CHANNEL_ID);
                 // Hide the timestamp
-                .setShowWhen(false)
+            notificationBuilder.setAutoCancel(true)
+                .setDefaults(Notification.DEFAULT_ALL)
+                .setWhen(System.currentTimeMillis())
                 // Set the Notification style
                 .setStyle(new MediaStyle()
                         // Attach our MediaSession token
@@ -573,7 +592,9 @@ public class MediaPlayerService extends Service implements
                 .addAction(notificationAction, "pause", play_pauseAction)
                 .addAction(android.R.drawable.ic_media_next, "next", playbackAction(2));
 
-        ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).notify(NOTIFICATION_ID, notificationBuilder.build());
+        //((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).notify(NOTIFICATION_ID, notificationBuilder.build());
+        notificationManager.notify(1, notificationBuilder.build());
+
     }
 
 
@@ -623,10 +644,13 @@ public class MediaPlayerService extends Service implements
             transportControls.stop();
         }
     }
-
+    public boolean isMediaSessionActive()
+    {
+        return mediaSession.isActive();
+    }
 
     /**
-     * Play new Audio
+     * Initializing Broadcast Receivers for MediaPlayer's actions
      */
     private BroadcastReceiver playNewAudio = new BroadcastReceiver() {
         @Override
@@ -650,11 +674,68 @@ public class MediaPlayerService extends Service implements
             buildNotification(PlaybackStatus.PLAYING);
         }
     };
+    private BroadcastReceiver pauseAudio = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            pauseMedia();
+            updateMetaData();
+            buildNotification(PlaybackStatus.PAUSED);
+        }
+    };
 
+    private BroadcastReceiver resumeAudio = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            resumeMedia();
+            updateMetaData();
+            buildNotification(PlaybackStatus.PLAYING);
+        }
+    };
+    private BroadcastReceiver skipToPrevAudio = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            skipToPrevious();
+            updateMetaData();
+            buildNotification(PlaybackStatus.PLAYING);
+        }
+    };
+    private BroadcastReceiver skipToNextAudio = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            skipToNext();
+            updateMetaData();
+            buildNotification(PlaybackStatus.PLAYING);
+        }
+    };
+
+
+    /**
+     * Register the Broadcast Receivers for MediaPlayer's actions
+     */
     private void register_playNewAudio() {
         //Register playNewMedia receiver
         IntentFilter filter = new IntentFilter(MainActivity.Broadcast_PLAY_NEW_AUDIO);
         registerReceiver(playNewAudio, filter);
+    }
+    private void register_pauseAudio()
+    {
+        IntentFilter filter = new IntentFilter(PlayMusicActivity.Broadcast_PAUSE_AUDIO);
+        registerReceiver(pauseAudio,filter);
+    }
+    private void register_resumeAudio()
+    {
+        IntentFilter filter = new IntentFilter(PlayMusicActivity.Broadcast_RESUME_AUDIO);
+        registerReceiver(resumeAudio,filter);
+    }
+    private void register_skipToPrevAudio()
+    {
+        IntentFilter filter = new IntentFilter(PlayMusicActivity.Broadcast_SKIP_TO_PREV_AUDIO);
+        registerReceiver(skipToPrevAudio,filter);
+    }
+    private void register_skipToNextAudio()
+    {
+        IntentFilter filter = new IntentFilter(PlayMusicActivity.Broadcast_SKIP_TO_NEXT_AUDIO);
+        registerReceiver(skipToNextAudio,filter);
     }
 
 

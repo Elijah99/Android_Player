@@ -1,0 +1,15 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.example.android_player.MainActivity">
+    <item
+        android:id="@+id/sort_by_title"
+        android:orderInCategory="100"
+        android:title="@string/sort_by_title"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/sort_by_artist"
+        android:orderInCategory="100"
+        android:title="@string/sort_by_artist"
+        app:showAsAction="never" />
+</menu>

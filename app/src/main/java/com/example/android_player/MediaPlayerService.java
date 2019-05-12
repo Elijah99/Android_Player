@@ -16,20 +16,18 @@ import android.media.session.MediaSessionManager;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.RemoteException;
-import android.support.v4.content.ContextCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.media.app.NotificationCompat.MediaStyle;
+import android.support.v4.media.session.PlaybackStateCompat;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import java.io.IOException;
 import java.util.ArrayList;
-
-import static java.security.AccessController.getContext;
 
 public class MediaPlayerService extends Service implements
         MediaPlayer.OnPreparedListener,
@@ -45,6 +43,7 @@ public class MediaPlayerService extends Service implements
     public static final String ACTION_PREVIOUS = "com.example.android_player.ACTION_PREVIOUS";
     public static final String ACTION_NEXT = "com.example.android_player.ACTION_NEXT";
     public static final String ACTION_STOP = "com.example.android_player.ACTION_STOP";
+
     private MediaPlayer mediaPlayer;
 
     //MediaSession
@@ -95,15 +94,7 @@ public class MediaPlayerService extends Service implements
         //ACTION_AUDIO_BECOMING_NOISY -- change in audio outputs -- BroadcastReceiver
         registerBecomingNoisyReceiver();
         //Listen for BroadcastReceiver's Intents
-        register_playNewAudio();
-
-        register_pauseAudio();
-
-        register_resumeAudio();
-
-        register_skipToPrevAudio();
-
-        register_skipToNextAudio();
+       register_BroadcastRecievers();
     }
 
     //The system calls this method when an activity, requests the service be started
@@ -519,7 +510,7 @@ public class MediaPlayerService extends Service implements
             public void onSeekTo(long position) {
                 super.onSeekTo(position);
             }
-        });
+         });
     }
 
     private void updateMetaData() {
@@ -531,6 +522,7 @@ public class MediaPlayerService extends Service implements
                 .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, activeAudio.getArtist())
                 .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, activeAudio.getAlbum())
                 .putString(MediaMetadataCompat.METADATA_KEY_TITLE, activeAudio.getTitle())
+                .putString(MediaMetadataCompat.METADATA_KEY_DATE,activeAudio.getAddedDate())
                 .build());
     }
 
@@ -707,6 +699,30 @@ public class MediaPlayerService extends Service implements
             buildNotification(PlaybackStatus.PLAYING);
         }
     };
+    private BroadcastReceiver getMPInfo = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            getMPInfo();
+        }
+    };
+    private BroadcastReceiver setPosition = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int current_position;
+            current_position =  intent.getIntExtra("position",resumePosition);
+            mediaPlayer.seekTo(current_position*1000);
+        }
+    };
+    private BroadcastReceiver sendDuration = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int duration = mediaPlayer.getDuration();
+            duration =  intent.getIntExtra("duration",duration);
+            Intent intent1 = new Intent(PlayMusicActivity.Broadcast_SEND_DURATION);
+            intent1.putExtra("duration",duration);
+            sendBroadcast(intent1);
+            }
+    };
 
 
     /**
@@ -737,6 +753,50 @@ public class MediaPlayerService extends Service implements
         IntentFilter filter = new IntentFilter(PlayMusicActivity.Broadcast_SKIP_TO_NEXT_AUDIO);
         registerReceiver(skipToNextAudio,filter);
     }
+    private void register_getMPInfo()
+    {
+        IntentFilter filter = new IntentFilter(PlayMusicActivity.Broadcast_SET_MEDIA_PLAYER_INFO);
+        registerReceiver(getMPInfo,filter);
+    }
+    private void register_setPosition()
+    {
+        IntentFilter filter = new IntentFilter(PlayMusicActivity.Broadcast_SET_POSITION);
+        registerReceiver(setPosition,filter);
+    }
+    private void register_sendDuration()
+    {
+        IntentFilter filter = new IntentFilter(PlayMusicActivity.Broadcast_SEND_DURATION);
+        registerReceiver(sendDuration,filter);
+    }
 
+    private void getMPInfo()
+    {
+        long duration = mediaPlayer.getDuration();
+        long cur_position = mediaPlayer.getCurrentPosition();
+        Intent intent = new Intent(PlayMusicActivity.Broadcast_SET_MEDIA_PLAYER_INFO);
+        intent.putExtra("duration",duration);
+        intent.putExtra("current_time",cur_position);
+        intent.putExtra("title",activeAudio.getTitle());
+        intent.putExtra("artist",activeAudio.getArtist());
+        sendBroadcast(intent);
+    }
+    private void register_BroadcastRecievers()
+    {
+        register_playNewAudio();
+
+        register_pauseAudio();
+
+        register_resumeAudio();
+
+        register_skipToPrevAudio();
+
+        register_skipToNextAudio();
+
+        register_getMPInfo();
+
+        register_setPosition();
+
+        register_sendDuration();
+    }
 
 }

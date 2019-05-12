@@ -1,7 +1,6 @@
 package com.example.android_player;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -11,36 +10,34 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.res.TypedArray;
 import android.database.Cursor;
-import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PersistableBundle;
 import android.provider.MediaStore;
-import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
-import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.ImageView;
-import android.widget.MediaController;
 import android.widget.Toast;
 
-
-
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.example.android_player.Audio;
 
 import static android.os.Build.VERSION.SDK_INT;
 
@@ -48,6 +45,7 @@ public class MainActivity extends AppCompatActivity  {
 
     public static final String Broadcast_PLAY_NEW_AUDIO = "com.example.android_player.PlayNewAudio";
     public static final int REQUEST_ID_MULTIPLE_PERMISSIONS = 1;
+
 
     private String action;
     private MediaPlayerService player;
@@ -66,6 +64,7 @@ public class MainActivity extends AppCompatActivity  {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+
 
 
         if (checkAndRequestPermissions()) {
@@ -187,17 +186,12 @@ public class MainActivity extends AppCompatActivity  {
                 public void onClick(View view, int index) {
                     playAudio(index);
                     Intent intent = new Intent(MainActivity.this,PlayMusicActivity.class);
-                    intent.putExtra("playing_song_index",index);
                     startActivity(intent);
                     }
             }));
         }
     }
 
-    private void loadCollapsingImage(int i) {
-        TypedArray array = getResources().obtainTypedArray(R.array.images);
-        collapsingImageView.setImageDrawable(array.getDrawable(i));
-    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -205,6 +199,7 @@ public class MainActivity extends AppCompatActivity  {
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
+
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -215,6 +210,29 @@ public class MainActivity extends AppCompatActivity  {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            return true;
+
+        }
+
+        if(id == R.id.sort_by_title)
+        {
+            Comparator<Audio> audioComparator = new TitleComparator();
+            Collections.sort(audioList,audioComparator);
+            initRecyclerView();
+            return true;
+        }
+        if(id == R.id.sort_by_artist)
+        {
+            Comparator<Audio> audioComparator = new ArtistComparator();
+            Collections.sort(audioList,audioComparator);
+            initRecyclerView();
+            return true;
+        }
+        if(id == R.id.sort_by_date_added)
+        {
+            Comparator<Audio> audioComparator = new DateAddedComparator();
+            Collections.sort(audioList,audioComparator);
+            initRecyclerView();
             return true;
         }
 
@@ -275,6 +293,7 @@ public class MainActivity extends AppCompatActivity  {
     }
 
 
+
     private void loadAudio() {
         ContentResolver contentResolver = getContentResolver();
 
@@ -290,14 +309,39 @@ public class MainActivity extends AppCompatActivity  {
                 String title = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE));
                 String album = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM));
                 String artist = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST));
+                String added_date = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATE_ADDED));
 
                 // Save to audioList
-                audioList.add(new Audio(data, title, album, artist));
+                audioList.add(new Audio(data, title, album, artist,added_date));
             }
         }
         cursor.close();
     }
 
+    class TitleComparator implements Comparator<Audio>
+    {
+
+        @Override
+        public int compare(Audio a, Audio b) {
+            return a.getTitle().compareTo(b.getTitle());
+        }
+    }
+    class ArtistComparator implements Comparator<Audio>
+    {
+
+        @Override
+        public int compare(Audio a, Audio b) {
+            return a.getArtist().compareTo(b.getArtist());
+        }
+    }
+    class DateAddedComparator implements Comparator<Audio>
+    {
+
+        @Override
+        public int compare(Audio a, Audio b) {
+            return b.getAddedDate().compareTo(a.getAddedDate());
+        }
+    }
 
     @Override
     protected void onDestroy() {
@@ -308,4 +352,8 @@ public class MainActivity extends AppCompatActivity  {
             player.stopSelf();
         }
     }
+
+
+
+
 }

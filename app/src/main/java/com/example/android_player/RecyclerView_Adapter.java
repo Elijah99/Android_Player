@@ -37,6 +37,7 @@ public class RecyclerView_Adapter extends RecyclerView.Adapter<ViewHolder> {
     public void onBindViewHolder(ViewHolder holder, int position) {
         //Use the provided View Holder on the onCreateViewHolder method to populate the current row on the RecyclerView
         holder.title.setText(list.get(position).getTitle());
+        holder.artist.setText(list.get(position).getArtist());
     }
 
     @Override
@@ -55,11 +56,13 @@ public class RecyclerView_Adapter extends RecyclerView.Adapter<ViewHolder> {
 class ViewHolder extends RecyclerView.ViewHolder {
 
     TextView title;
+    TextView artist;
     ImageView play_pause;
 
     ViewHolder(View itemView) {
         super(itemView);
         title = (TextView) itemView.findViewById(R.id.title);
+        artist = (TextView) itemView.findViewById(R.id.artist);
         play_pause = (ImageView) itemView.findViewById(R.id.play_pause);
     }
 }
